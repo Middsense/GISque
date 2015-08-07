@@ -1,8 +1,25 @@
 # -*- coding: utf-8 -*-
 """
 Created on Fri Aug  7 11:38:33 2015
+Name:
+Purpose:
+Author:  Andrea Vaccari (av9g@virginia.edu)
+Version: 0.0.0-alpha
 
-@author: andreavaccari
+    Copyright (C) Fri Aug  7 18:05:55 2015  Andrea Vaccari
+
+    This program is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
 
 class StretchStack(object):
