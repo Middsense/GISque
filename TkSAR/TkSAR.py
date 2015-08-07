@@ -17,80 +17,123 @@ import tkMessageBox as tkmb
 from osgeo import gdal
 from PIL import Image, ImageTk
 import numpy as np
+from sys import path
 import os
+from glob import glob
+from importlib import import_module
 
 
-class sarImage(object):
+
+class Raster(object):
     def __init__(self):
-        self.min = 0.0
-        self.max = 0.0
-        self.ave = 0.0
-        self.var = 0.0
-        self.currentImage = np.zeros((2, 2))
+        pass
 
     @classmethod
     def image(self, image):
-        self.originalImage = image.copy()
-        self.currentImage = image.copy()
+        pass
 
-    def loadImage(self, image):
-        self.originalImage = image.copy()
-        self.currentImage = image.copy()
 
-    def logCompress(self):
-        self.currentImage = np.log10(1.0 + self.currentImage)
-
-    def getOriginalImage(self):
-        return self.originalImage.copy()
-
-    def getCurrentImage(self):
-        return self.currentImage.copy()
-
-    def resetOriginal(self):
-        self.currentImage = self.originalImage.copy()
-
-    def evalStats(self):
-        self.min = np.nanmin(self.currentImage)
-        self.max = np.nanmax(self.currentImage)
-        self.ave = np.nanmean(self.currentImage)
-        self.var = np.nanvar(self.currentImage)
-
-    def getStats(self):
-        return (self.min, self.max, self.ave, self.var)
+class Stack(object):
+    def __init__(self):
+        pass
 
 
 class SarAmplitude(tk.Frame):
     def __init__(self, parent):
+        """
+        Initializes the main screen.
+
+        Parameters
+        ----------
+        parent : class instance
+            Toplevel widget of Tk which represents the main window of the
+            application.
+        """
         tk.Frame.__init__(self, parent)
 
+        # Define main windows characteristics
         self.canvasSize = (600, 600)
-        self.nodata = -9999.0
-
         self.parent = parent
-        self.dispImage = sarImage()
-        self.grid()
         self.parent.title('SAR Amplitude analysis')
-        self.createMenus()
+
+        # Instantiate single image and stack classes
+        self.currentImage = Raster()
+        self.currentStack = Stack()
+
+        # Check for available plugins
+        self.pl, self.gr = self.instantiatePlugins()
+
+        # Define the window components and their layout
         self.createWidgets()
+
+        # Define the menu bar items
+        self.createMenus()
+
+        # Create the window
+        self.grid()
+
+        # We're ready to go!
         self.updateStatus()
 
+
+    def instantiatePlugins(self):
+        """
+        Looks for plugins classes and instantiates them
+
+        Returns
+        -------
+        plg : list
+            A list of class instances, one for each plugin found.
+        grp : list
+            A list of the plugins groups.
+        """
+        # TODO: Implement the plugin classes: Input, Output, Analysis and use
+        #       them to place widgets on the screen
+        PLUGINS_DIR = 'Plugins'
+        VALID_CLASSES = ['Input', 'Analysis']
+        plugins_folder = os.path.join(os.path.dirname(os.path.realpath(__file__)), PLUGINS_DIR)
+        plugins_files = glob(os.path.join(plugins_folder, '*.py'))
+        plugins_list = [f[:-3] for _, f in [os.path.split(p) for p in plugins_files]]
+        path.append(plugins_folder)  # Add plugins path to PYTHONPATH
+
+        plg = []
+        grp = set()
+        for v in plugins_list:
+            try:
+                v = getattr(import_module(v), v)
+            except ImportError as e:
+                print 'TODO: handle this error: ' + e.message
+                pass
+            else:
+                inst = v()
+                if VALID_CLASSES.count(inst.pluginClass) == 0:
+                    continue
+                plg.append(inst)
+                grp.add(inst.pluginGroup)
+        return plg, list(grp)
+
+
     def updateStatus(self, string=None):
+        """
+        Updates the status bar
+
+        Parameters
+        ----------
+
+        string : string
+            The status string to be displayed. If ``None`` (default) then the
+            message ``Ready!`` will be displayed.
+        """
         if string is None:
             string = 'Ready!'
         self.statusStr.set(string)
         self.update_idletasks()
 
-    def updateStats(self):
-        self.updateStatus('Evaluating image statistics...')
-        self.dispImage.evalStats()
-        smin, smax, save, svar = self.dispImage.getStats()
-        self.statsMinStr.set('{:.4f}'.format(smin))
-        self.statsMaxStr.set('{:.4f}'.format(smax))
-        self.statsAveStr.set('{:.4f}'.format(save))
-        self.statsVarStr.set('{:.4f}'.format(svar))
-        self.updateStatus()
 
     def createMenus(self):
+        """
+        Defines the menubar items
+        """
         # Menu
         self.menubar = tk.Menu(self.parent)
         self.parent.config(menu=self.menubar)
@@ -107,7 +150,11 @@ class SarAmplitude(tk.Frame):
                                  menu=self.fileMenu)
 
 
+
     def createWidgets(self):
+        """
+        Defines the window components and their layout
+        """
         ### Title ###
         self.title = tk.Label(self.parent,
                               text='SAR Image Analysis Toolbox',
@@ -115,6 +162,8 @@ class SarAmplitude(tk.Frame):
                                               weight='bold'),
                               anchor=tk.CENTER)
         self.title.grid(row=0, column=0)
+
+
 
 
 
@@ -165,109 +214,63 @@ class SarAmplitude(tk.Frame):
 
 
 
-        ## Right frame: display and stats ##
-        self.rightFrame = tk.Frame(self.middleFrame)
-        self.rightFrame.grid(row=0, column=2, sticky=tk.N)
 
-        # Right - display frame
-        self.displayFrame = tk.LabelFrame(self.rightFrame,
-                                          text='Display')
-        self.displayFrame.grid(row=0, column=0)
 
-        # Update button
-        self.updateButton = tk.Button(self.displayFrame,
-                                      text='Update',
-                                      command=self.updateImage)
-        self.updateButton.grid(row=0, column=0)
 
-        # Log compress button
-        self.logCompButton = tk.Button(self.displayFrame,
-                                       text='Log10 Compress',
-                                       command=self.logCompImage)
-        self.logCompButton.grid(row=1, column=0)
 
-        # Right - statistics frame
-        self.statsFrame = tk.LabelFrame(self.rightFrame,
-                                        text='Stats')
-        self.statsFrame.columnconfigure(0, weight=1)
-        # Gridded in main code once an image is loaded
+        ## Right frame: analysis ##
+        rightFrame = tk.Frame(self.middleFrame)
+        rightFrame.columnconfigure(0, weight=1)
+        rightFrame.grid(row=0, column=2, sticky=tk.N)
 
-        # Min value
-        self.statsMinFrame = tk.LabelFrame(self.statsFrame,
-                                           font=(None, 10),
-                                           labelanchor=tk.NE,
-                                           text='Min')
-        self.statsMinFrame.grid(row=0, column=0, sticky=tk.E+tk.W)
-        self.statsMinFrame.columnconfigure(0, weight=1)
-        self.statsMinStr = tk.StringVar()
-        self.statsMin = tk.Label(self.statsMinFrame,
-                                 anchor=tk.E,
-                                 textvariable=self.statsMinStr)
-        self.statsMin.grid(row=0, column=0, sticky=tk.E+tk.W)
+        # Cycle through the analysis plugins groups and create label frames
+        di = {}  # A dictionary to contain the callbacks
+        for k, g in enumerate(self.gr):
+            labelFrame = tk.LabelFrame(rightFrame,
+                                       font=(None, 10),
+                                       labelanchor=tk.NE,
+                                       text=g)
+            labelFrame.columnconfigure(0, weight=1)
+            labelFrame.grid(row=k, column=0, sticky=tk.E+tk.W)
 
-        # Max value
-        self.statsMaxFrame = tk.LabelFrame(self.statsFrame,
-                                           font=(None, 10),
-                                           labelanchor=tk.NE,
-                                           text='Max')
-        self.statsMaxFrame.grid(row=1, column=0, sticky=tk.E+tk.W)
-        self.statsMaxFrame.columnconfigure(0, weight=1)
-        self.statsMaxStr = tk.StringVar()
-        self.statsMax = tk.Label(self.statsMaxFrame,
-                                 anchor=tk.E,
-                                 textvariable=self.statsMaxStr)
-        self.statsMax.grid(row=0, column=0, sticky=tk.E+tk.W)
+            # Cycle through the plugin instances and fill the dictionary
+            # with the callbacks
+            pl = []  # A list to contain the plugin labels
+            for p in self.pl:
+                if p.pluginGroup == g:
+                    di[g + p.pluginLabel] = p.pluginCommand
+                    pl.append(p.pluginLabel)
 
-        # Average value
-        self.statsAveFrame = tk.LabelFrame(self.statsFrame,
-                                           font=(None, 10),
-                                           labelanchor=tk.NE,
-                                           text='Average')
-        self.statsAveFrame.grid(row=2, column=0, sticky=tk.E+tk.W)
-        self.statsAveFrame.columnconfigure(0, weight=1)
-        self.statsAveStr = tk.StringVar()
-        self.statsAve = tk.Label(self.statsAveFrame,
-                                 anchor=tk.E,
-                                 textvariable=self.statsAveStr)
-        self.statsAve.grid(row=0, column=0, sticky=tk.E+tk.W)
+            # Create dropdown menus, one for each group
+            var = tk.StringVar(name=g)
+            var.set(g)
+            var.trace('w', lambda name, idx, mode: di[name + self.parent.globalgetvar(name)](self.currentImage, self.currentStack, self.updateStatus))
+            opt = tk.OptionMenu(labelFrame, var, *pl)
+            opt.grid(row=0, column=0, sticky=tk.E+tk.W)
 
-        # Variance value
-        self.statsVarFrame = tk.LabelFrame(self.statsFrame,
-                                           font=(None, 10),
-                                           labelanchor=tk.NE,
-                                           text='Variance')
-        self.statsVarFrame.grid(row=3, column=0, sticky=tk.E+tk.W)
-        self.statsVarFrame.columnconfigure(0, weight=1)
-        self.statsVarStr = tk.StringVar()
-        self.statsVar = tk.Label(self.statsVarFrame,
-                                 anchor=tk.E,
-                                 textvariable=self.statsVarStr)
-        self.statsVar.grid(row=0, column=0, sticky=tk.E+tk.W)
 
-        # Update stats button
-        self.updateStatsButton = tk.Button(self.statsFrame,
-                                           text='Update',
-                                           command=self.updateStats)
-        self.updateStatsButton.grid(row=4, column=0, sticky=tk.E+tk.W)
+
 
 
 
 
         ### Bottom: status bar and quit button ###
-        self.bottomFrame = tk.Frame(self.parent)
-        self.bottomFrame.grid(row=2, column=0, sticky=tk.W+tk.E)
+        bottomFrame = tk.Frame(self.parent)
+        bottomFrame.grid(row=2, column=0, sticky=tk.W+tk.E)
+        bottomFrame.columnconfigure(1, weight=1)
 
         # Quit button
-        self.quitButton = tk.Button(self.bottomFrame,
+        self.quitButton = tk.Button(bottomFrame,
                                     text='Quit',
                                     command=self.onExit)
-        self.quitButton.grid(row=0, column=0)
+        self.quitButton.grid(row=0, column=0, sticky=tk.W)
 
         # Status bar
         self.statusStr = tk.StringVar()
-        self.statusBar = tk.Label(self.bottomFrame,
+        self.statusBar = tk.Label(bottomFrame,
+                                  anchor=tk.W,
                                   textvariable=self.statusStr)
-        self.statusBar.grid(row=0, column=1, sticky=tk.W)
+        self.statusBar.grid(row=0, column=1, sticky=tk.W+tk.E)
 
     def onExit(self):
         self.updateStatus('Quitting...')
@@ -307,7 +310,6 @@ class SarAmplitude(tk.Frame):
         tif_data[tif_data == no_data] = np.nan
         self.dispImage.loadImage(tif_data)
         self.updateStats()
-        self.statsFrame.grid(row=1, column=0, sticky=tk.E+tk.W)
         self.updateStatus()
         tif = None  # Properly close the file
 
@@ -378,8 +380,5 @@ def main():
     app = SarAmplitude(root)
     app.mainloop()
 
-
-
 if __name__ == '__main__':
-   main()
-
+    main()
