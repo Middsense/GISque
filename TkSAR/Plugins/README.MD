@@ -1,3 +1,5 @@
+# Plugins format
+
 Each plugin is defined as a `class`. The class name should be the same as the
 module name to insure the plugin is properly loaded.
 
