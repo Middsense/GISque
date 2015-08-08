@@ -8,7 +8,7 @@ Purpose: Example of tkinter GUI to perform simple SAR image analysis
 Author:  Andrea Vaccari (av9g@virginia.edu)
 Version: 0.0.0-alpha
 
-    Copyright (C) Fri Aug  7 18:05:31 2015  Andrea Vaccari
+    Copyright (C) 2015  Andrea Vaccari
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by

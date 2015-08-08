@@ -1,3 +1,8 @@
+This license and copyright applie to all the files contained in this folder and
+its subfolders.
+
+Copyright (C) 2015 Andrea Vaccari
+
                     GNU GENERAL PUBLIC LICENSE
                        Version 3, 29 June 2007
 
