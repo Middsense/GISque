@@ -12,6 +12,7 @@ Version: 1.0.1
 Revision history:
 2015-10-08 (1.0.1)
 Fixed issue with coordinates conversion when using EPSG.
+Fixed issue with saving numpy array.
 
 2014-11-22 (1.0.0)
 Fist release
@@ -249,11 +250,12 @@ def subgeotiff(data_in, data_out, bbox, prj_epsg, prj_url, dest_dir, overwrite, 
 
     # If we want the array, save it
     if npout:
+        print "- Saving numpy array"
         fname = data_out + ".npy"
         if dest_dir:
             fname = join(data_out, fname)
-            with open(fname, 'w') as fil:
-                np.save(fil, np_out)
+        with open(fname, 'w') as fil:
+            np.save(fil, np_out)
 
 if __name__ == "__main__":
     # If it is used as a script, parse the arguments
