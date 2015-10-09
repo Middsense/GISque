@@ -7,7 +7,14 @@ Purpose: Extract a spatial subset of a GeoTIFF (or a stack of GeoTIFF) and
          of the original stack. The tool assumes that each GeoTIFF contains a
          single band.
 Author:  Andrea Vaccari (av9g@virginia.edu)
-Version: 1.0.0
+Version: 1.0.1
+
+Revision history:
+2015-10-08 (1.0.1)
+Fixed issue with coordinates conversion when using EPSG.
+
+2014-11-22 (1.0.0)
+Fist release
 """
 
 from shutil import rmtree
@@ -80,11 +87,11 @@ def subgeotiff(data_in, data_out, bbox, prj_epsg, prj_url, dest_dir, overwrite, 
     # If not pixels, then create point geometries
     if rng_srs:
         if bbox:
-            [sl, st, er, eb] = bbox
+            [bbsl, bbst, bber, bbeb] = bbox
             tl = ogr.Geometry(ogr.wkbPoint)
-            tl.AddPoint(sl, st)
+            tl.AddPoint(bbsl, bbst)
             br = ogr.Geometry(ogr.wkbPoint)
-            br.AddPoint(er, eb)
+            br.AddPoint(bber, bbeb)
         else:
             rng_srs = None
 
@@ -116,12 +123,14 @@ def subgeotiff(data_in, data_out, bbox, prj_epsg, prj_url, dest_dir, overwrite, 
         # If coordinates
         if rng_srs:
             transf = osr.CoordinateTransformation(rng_srs, src_srs)
+            tl.SetPoint(0, bbsl, bbst)
             tl.Transform(transf)
             tl_coo = tl.GetPoint()
-            print "    - top left: {0} -> {1}".format((sl, st), tl_coo)
+            print "    - top left: {0} -> {1}".format((bbsl, bbst), tl_coo)
+            br.SetPoint(0, bber, bbeb)
             br.Transform(transf)
             br_coo = br.GetPoint()
-            print "    - bottom right: {0} -> {1}".format((er, eb), br_coo)
+            print "    - bottom right: {0} -> {1}".format((bber, bbeb), br_coo)
             sr = int((tl_coo[1] - ingeo[3])/ingeo[5])
             sc = int((tl_coo[0] - ingeo[0])/ingeo[1])
             er = int((br_coo[1] - ingeo[3])/ingeo[5])
