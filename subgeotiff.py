@@ -14,8 +14,8 @@ Revision history:
 Fixed issue with coordinates conversion when using EPSG.
 Fixed issue with saving numpy array.
 
-2014-11-22 (1.0.0)
-Fist release
+2015-07-31 (1.0.0)
+Fist commit
 """
 
 from shutil import rmtree
